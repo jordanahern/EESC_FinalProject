@@ -1,0 +1,58 @@
+
+PlantData = readtable('Power_Generation_Emissions.csv');
+
+CO2_Rate = PlantData.x2023_CO2_Rate;
+CO2_Rate = str2double(string(CO2_Rate));
+
+CO2_Rate = CO2_Rate(~isnan(CO2_Rate));
+
+boxplot(CO2_Rate);
+title('Box Plot of 2023 CO2 Emission Rates');
+xlabel('CO2 Emission Rate');
+ylabel('lb of CO2 per MMBTU');
+
+%% 
+
+SO2_Rate = PlantData.x2023_SO2_Rate;
+SO2_Rate = str2double(string(SO2_Rate));
+
+SO2_Rate = SO2_Rate(~isnan(SO2_Rate));
+
+boxplot(SO2_Rate);
+title('Box Plot of 2023 SO2 Emission Rates');
+xlabel('SO2 Emission Rate');
+ylabel('lb of SO2 per MMBTU');
+
+%% 
+
+NOX_Rate = PlantData.x2023_NOX_Rate;
+NOX_Rate = str2double(string(NOX_Rate));
+
+NOX_Rate = NOX_Rate(~isnan(NOX_Rate));
+
+boxplot(NOX_Rate);
+title('Box Plot of 2023 NOX Emission Rates');
+xlabel('NOX Emission Rate');
+ylabel('lb of NOX per MMBTU');
+
+%% 
+
+% Specify the columns to include in the new dataset
+columnsToInclude = {'Lat', 'Long', 'x2023_CO2_Emissions', 'x2023_NOX_Emissions', 'x2023_SO2_Emissions', 'x2023_CO2_Rate', 'x2023_NOX_Rate', 'x2023_SO2_Rate', 'HeatRate_MBTU'};
+
+% Specify new, more readable names for these columns
+newColumnNames = {'Lat', 'Long', 'CO2_Emissions', 'NOX_Emissions', 'SO2_Emissions', 'CO2_Rate', 'NOX_Rate', 'SO2_Rate', 'Heat_Rate'};
+
+% Create the new dataset with the specified columns
+NewPlantData = PlantData(:, columnsToInclude);
+
+% Rename the columns in the new dataset
+NewPlantData.Properties.VariableNames = newColumnNames;
+
+% Convert 'Heat_Rate_MBTU' column to numeric if it's stored as strings within a cell. 
+% str2double will turn non-numeric strings to NaN, which can be filtered out in the next step.
+NewPlantData.Heat_Rate = cellfun(@(x) str2double(x), NewPlantData.Heat_Rate, 'UniformOutput', true);
+
+% Filter out rows where Heat_Rate_MBTU is NaN after conversion
+NewPlantData = NewPlantData(~isnan(NewPlantData.Heat_Rate), :);
+%% 
