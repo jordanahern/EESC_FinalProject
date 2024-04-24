@@ -1,48 +1,43 @@
 % Load the dataset
 PlantData = readtable('Power_Generation_Emissions.csv');
 
-% Specify the columns to include in the new dataset
+% Specify the columns to keep and make new dataset
 columnsToInclude = {'Lat', 'Long', 'x2023_CO2_Emissions', 'x2023_NOX_Emissions', 'x2023_SO2_Emissions', 'x2023_CO2_Rate', 'x2023_NOX_Rate', 'x2023_SO2_Rate', 'HeatRate_MBTU'};
-
-% Create the new dataset with the specified columns
 NewPlantData = PlantData(:, columnsToInclude);
 
-% Specify new, more readable names for these columns
+% Change names of columns
 newColumnNames = {'Latitude', 'Longitude', 'CO2_Emissions', 'NOX_Emissions', 'SO2_Emissions', 'CO2_Rate', 'NOX_Rate', 'SO2_Rate', 'Heat_Rate'};
-
-% Rename the columns in the new dataset
 NewPlantData.Properties.VariableNames = newColumnNames;
 
-% Convert all necessary columns from strings to numeric (if any were imported as strings)
+% Convert all necessary columns from strings to numeric and replace nan
 for idx = 1:length(newColumnNames)
     if iscategorical(NewPlantData.(newColumnNames{idx})) || iscell(NewPlantData.(newColumnNames{idx}))
         NewPlantData.(newColumnNames{idx}) = str2double(strrep(strrep(table2array(NewPlantData(:, idx)), '(', '-'), ')', ''));
     end
 end
 
-% Replace NaN values with zeros
 for idx = 1:length(newColumnNames)
     NewPlantData.(newColumnNames{idx})(isnan(NewPlantData.(newColumnNames{idx}))) = 0;
 end
 
-% Remove rows where CO2_Emissions is zero
+% remove rows where CO2_Emissions is zero. I.e. they arent emitters
 NewPlantData(NewPlantData.CO2_Emissions == 0, :) = [];
 
-%% 
+%% Boxplots! 
+
 CO2_Rate = NewPlantData.CO2_Rate;
 boxplot(CO2_Rate);
 title('Box Plot of 2023 CO2 Emission Rates');
 xlabel('CO2 Emission Rate');
 ylabel('lb of CO2 per MMBTU');
 
-%% 
 SO2_Rate = NewPlantData.SO2_Rate;
 boxplot(SO2_Rate);
 title('Box Plot of 2023 SO2 Emission Rates');
 xlabel('SO2 Emission Rate');
 ylabel('lb of SO2 per MMBTU');
 
-%% 
+
 NOX_Rate = NewPlantData.NOX_Rate;
 boxplot(NOX_Rate);
 title('Box Plot of 2023 NOX Emission Rates');
@@ -50,7 +45,7 @@ xlabel('NOX Emission Rate');
 ylabel('lb of NOX per MMBTU');
 
 
-%% 
+%%  Solar Data load and Map
 %Load dataset
 Sundata = readtable("SolarData.csv");
 %Specify columns
@@ -66,44 +61,26 @@ for idx = 1:length(Suncolumns)
     NewSunData.(Suncolumns{idx})(isnan(NewSunData.(Suncolumns{idx}))) = 0;
 end
 
-suncapacityfactor = Sundata.capacity_factor;
-suncapacitymw = Sundata.capacity_mw;
-rawsuncapacity = suncapacityfactor.*suncapacitymw;
-sizeData = 100 * (rawsuncapacity / max(rawsuncapacity));
-colorData = Sundata.capacity_factor;
-figure; 
-g = geoscatter(sunlat, sunlon, sizeData, colorData, 'filled');
-hold on
-title('Solar Technical Capacity (MW)')
 
-%% 
-% Load dataset
-Sundata = readtable("SolarData.csv");
-% Specify columns
-Suncolumns = {'capacity_factor','capacity_mw','area_sq_km','longitude','latitude'};
-% Latitude and Longitude
-sunlat = Sundata.latitude;
-sunlon = Sundata.longitude;
-% New dataset with specified columns
-NewSunData = Sundata(:,Suncolumns);
-% Replace NaN values with zeros
-for idx = 1:length(Suncolumns)
-    NewSunData.(Suncolumns{idx})(isnan(NewSunData.(Suncolumns{idx}))) = 0;
-end
+Solar_Capacity = Sundata.capacity_mw;
+Size_Solar_Capacity = 100* (Sundata.capacity_mw/ max(Sundata.capacity_mw));
+Solar_CF = Sundata.capacity_factor;
 
-suncapacityfactor = Sundata.capacity_factor;
-suncapacitymw = Sundata.capacity_mw;
-rawsuncapacity = suncapacityfactor .* suncapacitymw;
-sizeData = 100 * (rawsuncapacity / max(rawsuncapacity));
-colorData = Sundata.capacity_factor;
 
+% Sort the solar data by capacity factor in ascending order
+[sortedSolarCF, idx] = sort(Solar_CF);
+sortedSunLat = sunlat(idx);
+sortedSunLon = sunlon(idx);
+sortedSizeSolarCapacity = Size_Solar_Capacity(idx);  % Assuming Size_Solar_Capacity is aligned with the original data
+
+% Visualization with sorted data
 figure;
-g = geoscatter(sunlat, sunlon, sizeData, colorData, 'filled');
+g = geoscatter(sortedSunLat, sortedSunLon, sortedSizeSolarCapacity, sortedSolarCF, 'filled');
 hold on;
-title('Solar energy Technical Potential. Sized by Capacity (MW), Colored by Capacity Factor (%)');
+title('Solar energy Technical Potential, Colored by Capacity Factor (%)');
 colorbar; % Adds a color bar on the side of the figure
 colormap parula; % Sets the color map used for the color bar
-caxis([min(colorData) max(colorData)]); % Sets the range of data values covered by the colormap
+caxis([min(sortedSolarCF) max(sortedSolarCF)]); % Adjusts the range of data values covered by the colormap to the sorted data
 ylabel(colorbar, 'Capacity Factor'); % Label the color bar
 hold off;
 
@@ -130,32 +107,38 @@ end
 for idx = 1:length(newWindColumnNames)
     NewWindData.(newWindColumnNames{idx})(isnan(NewWindData.(newWindColumnNames{idx}))) = 0;
 end
+
 % Calculate Energy Output
-WindEnergyOutput = NewWindData.Capacity .* NewWindData.Capacity_Factor;
+%WindEnergyOutput = NewWindData.Capacity .* NewWindData.Capacity_Factor;
+Wind_Capacity = NewWindData.Capacity
 % Add the new variable to the table
 NewWindData = addvars(NewWindData, WindEnergyOutput);
 
 % Prepare color and size data
-colorWindData = NewWindData.Capacity_Factor;  % Color by capacity factor
-sizeWindData = 100 * (WindEnergyOutput / max(WindEnergyOutput));  % Size relative to maximum output
+Wind_CF = NewWindData.Capacity_Factor;  % Color by capacity factor
+sizeWindData = 100 * (Wind_Capacity / max(Wind_Capacity));  % Size relative to maximum output
 
 % Create a figure to hold the map
+% Sort the wind data by capacity factor in ascending order
+[sortedWindCF, idx] = sort(NewWindData.Capacity_Factor);
+sortedLat = NewWindData.Latitude(idx);
+sortedLon = NewWindData.Longitude(idx);
+sortedSize = sizeWindData(idx);  % Assuming sizeWindData is aligned with the original data
+
+% Visualization with sorted data
 figure;
-% Plot each power plant on the map using geoscatter
-f = geoscatter(NewWindData.Latitude, NewWindData.Longitude, sizeWindData, colorWindData, 'filled');
-% Set the colormap
+f = geoscatter(sortedLat, sortedLon, sortedSize, sortedWindCF, 'filled');
+f.MarkerEdgeAlpha = 1;
+f.MarkerFaceAlpha = 1;
 colormap(parula);  % 'parula' has a nice gradient from blue to yellow, good for continuous data
 colorbar;  % Adds a color bar to indicate the scale of capacity factors
 ylabel(colorbar, 'Capacity Factor (%)');  % Label the color bar
-
-% Set map limits to focus on the specific geographic area if needed
-% geolimits([24 50],[-125 -66]);  % Uncomment and adjust if you need to set specific geographic boundaries
-
-% Add a title
 title('Wind energy Technical Potential. Sized by Capacity (MW), Colored by Capacity Factor (%)');
-% Set the map's appearance
 geobasemap grayland;  % A simple basemap that highlights data points
 grid on;  % Turn on the grid for better orientation
+
+
+
 
 
 
@@ -299,3 +282,64 @@ end
 % Display the correlation results
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Solar Capacity Factor: %f (p-value = %f)\n', rhoSolar, pValueSolar);
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Wind Capacity Factor: %f (p-value = %f)\n', rhoWind, pValueWind);
+
+
+
+%% Load Data
+Sundata = readtable("SolarData.csv");
+WindData = readtable('WindData.csv');
+
+% Extract Needed Data from Solar
+Suncolumns = {'capacity_factor', 'longitude', 'latitude'};
+NewSunData = Sundata(:, Suncolumns);
+suncapacityfactor = Sundata.capacity_factor;
+
+% Prepare Wind Data
+WindColumnsToInclude = {'capacity_factor', 'longitude', 'latitude'};
+NewWindData = WindData(:, WindColumnsToInclude);
+NewWindData.Properties.VariableNames = {'Capacity_Factor', 'Longitude', 'Latitude'};
+
+% LCOE Constants ($/MWh)
+LCOE_Solar = 25.21;
+LCOE_Wind = 40.25;
+
+% Calculate Cost Effectiveness
+% Cost per unit of capacity factor (cost-effectiveness)
+sunCostEffectiveness = LCOE_Solar ./ suncapacityfactor;
+windCostEffectiveness = LCOE_Wind ./ NewWindData.Capacity_Factor;
+
+% Match Data and Calculate Differences
+DifferenceCostEffectiveness = NaN(size(NewSunData, 1), 1);
+
+for i = 1:size(NewSunData, 1)
+    distances = sqrt((NewWindData.Latitude - NewSunData.latitude(i)).^2 + ...
+                     (NewWindData.Longitude - NewSunData.longitude(i)).^2);
+    [~, idx] = min(distances);
+    if distances(idx) < 0.01
+        DifferenceCostEffectiveness(i) = sunCostEffectiveness(i) - windCostEffectiveness(idx);
+    end
+end
+
+% Visualization
+% Normalize for color mapping:
+normalizedDifference = DifferenceCostEffectiveness / max(abs(DifferenceCostEffectiveness));
+
+figure;
+h = geoscatter(NewSunData.latitude, NewSunData.longitude, 36, normalizedDifference, 'filled');
+title('Cost-Effectiveness Difference ($/Capacity Factor)');
+geobasemap grayland;
+grid on;
+
+% Custom Blue-Red Diverging Colormap
+N = 256; % Number of color levels
+red = [ones(1, N/2) linspace(1, 0, N/2)]; % Red decreases
+green = [linspace(0, 1, N/2) linspace(1, 0, N/2)]; % Green goes up then down
+blue = [linspace(0, 1, N/2) ones(1, N/2)]; % Blue increases
+customCMap = [red' green' blue']; % Combine into an Nx3 matrix
+
+colormap(gca, customCMap);
+caxis([-1 1]);  % Ensure the color axis is scaled from -1 to 1
+colorbar;  % Adds a color bar on the side of the figure
+ylabel(colorbar, 'Normalized Difference in Cost-Effectiveness');
+
+
