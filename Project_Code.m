@@ -120,8 +120,8 @@ sortedSize = sizeWindData(idx);
 % Visualization with sorted data
 figure;
 f = geoscatter(sortedLat, sortedLon, sortedSize, sortedWindCF, 'filled');
-f.MarkerEdgeAlpha = 1;
-f.MarkerFaceAlpha = 1;
+f.MarkerEdgeAlpha = .5;
+f.MarkerFaceAlpha = .5;
 colormap(parula);  % 'parula' has a nice gradient from blue to yellow, good for continuous data
 colorbar;  % Adds a color bar to indicate the scale of capacity factors
 ylabel(colorbar, 'Capacity Factor (%)');  % Label the color bar
@@ -170,7 +170,7 @@ title('Map of US Power Plants: Size by CO2 Emissions, Color by CO2 Rate');
 geobasemap grayland; %
 grid on;  % Turn on the grid to help orient the map
 
-%%
+%% Test of an interpolated heatmap of emissions rates
 
 % Define the latitude and longitude limits for the continental US
 latlim = [min(NewPlantData.Latitude) max(NewPlantData.Latitude)];
