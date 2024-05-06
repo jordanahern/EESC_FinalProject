@@ -61,11 +61,8 @@ for idx = 1:length(Suncolumns)
     NewSunData.(Suncolumns{idx})(isnan(NewSunData.(Suncolumns{idx}))) = 0;
 end
 
-
-Solar_Capacity = Sundata.capacity_mw;
 Size_Solar_Capacity = 100* (Sundata.capacity_mw/ max(Sundata.capacity_mw));
 Solar_CF = Sundata.capacity_factor;
-
 
 % Sort the solar data by capacity factor in ascending order
 [sortedSolarCF, idx] = sort(Solar_CF);
@@ -85,7 +82,7 @@ ylabel(colorbar, 'Capacity Factor'); % Label the color bar
 hold off;
 
 
-%% WIND
+%% Wind data load and map
 
 % Load the dataset
 WindData = readtable('WindData.csv');
@@ -109,27 +106,22 @@ for idx = 1:length(newWindColumnNames)
 end
 
 % Calculate Energy Output
-%WindEnergyOutput = NewWindData.Capacity .* NewWindData.Capacity_Factor;
-Wind_Capacity = NewWindData.Capacity
-% Add the new variable to the table
 NewWindData = addvars(NewWindData, WindEnergyOutput);
 
-% Prepare color and size data
-Wind_CF = NewWindData.Capacity_Factor;  % Color by capacity factor
-sizeWindData = 100 * (Wind_Capacity / max(Wind_Capacity));  % Size relative to maximum output
 
-% Create a figure to hold the map
 % Sort the wind data by capacity factor in ascending order
+sizeWindData = 100 * (NewWindData.Capacity / max(NewWindData.Capacity));  % Size relative to maximum output
 [sortedWindCF, idx] = sort(NewWindData.Capacity_Factor);
 sortedLat = NewWindData.Latitude(idx);
 sortedLon = NewWindData.Longitude(idx);
-sortedSize = sizeWindData(idx);  % Assuming sizeWindData is aligned with the original data
+sortedSize = sizeWindData(idx);  
+
 
 % Visualization with sorted data
 figure;
 f = geoscatter(sortedLat, sortedLon, sortedSize, sortedWindCF, 'filled');
-f.MarkerEdgeAlpha = 1;
-f.MarkerFaceAlpha = 1;
+f.MarkerEdgeAlpha = .5;
+f.MarkerFaceAlpha = .5;
 colormap(parula);  % 'parula' has a nice gradient from blue to yellow, good for continuous data
 colorbar;  % Adds a color bar to indicate the scale of capacity factors
 ylabel(colorbar, 'Capacity Factor (%)');  % Label the color bar
@@ -143,42 +135,60 @@ grid on;  % Turn on the grid for better orientation
 
 
 
-%% 
-
+%% Map for Plant Emissions
 % Replace any zero emissions to avoid errors in size scaling
 NewPlantData.CO2_Emissions(NewPlantData.CO2_Emissions == 0) = min(NewPlantData.CO2_Emissions(NewPlantData.CO2_Emissions > 0));
-
 % Prepare size data: Scale CO2 Emissions for visibility
 % You can adjust the scaling factor as needed
 sizeData = 100 * (NewPlantData.CO2_Emissions / max(NewPlantData.CO2_Emissions));
-
 % Prepare color data: Use CO2 Rates
 colorData = NewPlantData.CO2_Rate;
-
 % Create a figure to hold the map
 figure;
-
 % Plot each power plant on the map using geoscatter
 h = geoscatter(NewPlantData.Latitude, NewPlantData.Longitude, sizeData, colorData, 'filled');
-
 % Enhance the colormap to represent emissions rate intensity
 colormap(parula);  % 'parula' uses a spectrum from blue to yellow
 colorbar;  % Adds a color bar to indicate the scale of CO2 Rates
-
 % Set color limits starting at 100
 caxis([100 max(colorData)]);
-
 % Set map limits to focus on the United States
 geolimits([24 50],[-125 -66]);  % These limits roughly frame the continental US
-
 % Add a title
 title('Map of US Power Plants: Size by CO2 Emissions, Color by CO2 Rate');
-
 % Improve the map appearance
 geobasemap grayland; %
 grid on;  % Turn on the grid to help orient the map
+hold off
 
-%%
+%% Map for Plant Emissions
+
+% Replace any zero emissions to avoid errors in size scaling
+NewPlantData.SO2_Emissions(NewPlantData.SO2_Emissions == 0) = min(NewPlantData.SO2_Emissions(NewPlantData.SO2_Emissions > 0));
+% Prepare size data: Scale CO2 Emissions for visibility
+% You can adjust the scaling factor as needed
+sizeData_SO2 = 300 * (NewPlantData.SO2_Emissions / max(NewPlantData.SO2_Emissions));
+% Prepare color data: Use CO2 Rates
+colorData_SO2 = NewPlantData.SO2_Rate;
+% Create a figure to hold the map
+figure;
+% Plot each power plant on the map using geoscatter
+t = geoscatter(NewPlantData.Latitude, NewPlantData.Longitude, sizeData_SO2, colorData_SO2, 'filled');
+% Enhance the colormap to represent emissions rate intensity
+colormap(parula);  % 'parula' uses a spectrum from blue to yellow
+colorbar;  % Adds a color bar to indicate the scale of CO2 Rates
+% Set color limits starting at 100
+%caxis([100 max(colorData)]);
+% Set map limits to focus on the United States
+geolimits([24 50],[-125 -66]);  % These limits roughly frame the continental US
+% Add a title
+title('Map of US Power Plants: Size by SO2 Emissions, Color by SO2 Rate');
+% Improve the map appearance
+geobasemap grayland; %
+grid on;  % Turn on the grid to help orient the map
+hold off
+
+%% Test of an interpolated heatmap of emissions rates
 
 % Define the latitude and longitude limits for the continental US
 latlim = [min(NewPlantData.Latitude) max(NewPlantData.Latitude)];
@@ -212,26 +222,9 @@ colorbar;
 title('Heatmap of US Power Plants: Color by CO2 Rate');
 
 
-%% 
 
-% Aggregate solar and wind data to nearest power plant coordinates
-% We'll use a simple nearest neighbor approach here for demonstration
-% Find nearest solar data point for each power plant
-nearestSolarIndex = knnsearch([NewSunData.latitude, NewSunData.longitude], [NewPlantData.Latitude, NewPlantData.Longitude]);
-nearestSolarCapacity = NewSunData.capacity_mw(nearestSolarIndex);
+%% Exploratory Scatter Plots
 
-% Find nearest wind data point for each power plant
-nearestWindIndex = knnsearch([NewWindData.Latitude, NewWindData.Longitude], [NewPlantData.Latitude, NewPlantData.Longitude]);
-nearestWindCapacity = NewWindData.Capacity(nearestWindIndex);
-
-% Calculate Pearson correlation for CO2 emissions with solar and wind capacities
-[rSolar, pValueSolar] = corr(NewPlantData.CO2_Emissions, nearestSolarCapacity, 'Type', 'Pearson');
-[rWind, pValueWind] = corr(NewPlantData.CO2_Emissions, nearestWindCapacity, 'Type', 'Pearson');
-
-% Display results
-fprintf('Pearson correlation coefficient between CO2 Emissions and Solar Capacity: %f (p-value = %f)\n', rSolar, pValueSolar);
-fprintf('Pearson correlation coefficient between CO2 Emissions and Wind Capacity: %f (p-value = %f)\n', rWind, pValueWind);
-%% 
 % Scatter plot for CO2 Emissions vs. Solar Capacity
 figure;
 scatter(NewPlantData.CO2_Emissions, nearestSolarCapacity, 'filled');
@@ -245,7 +238,8 @@ scatter(NewPlantData.CO2_Emissions, nearestWindCapacity, 'filled');
 xlabel('CO2 Emissions (tons)');
 ylabel('Wind Capacity (MW)');
 title('Scatter Plot of CO2 Emissions vs. Wind Capacity');
-%% 
+%% Correlation Calculations
+
 % Constants
 maxDistanceKm = 50; % Maximum distance to include renewable data points
 earthRadiusKm = 6371; % Earth's radius in kilometers
@@ -283,9 +277,9 @@ end
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Solar Capacity Factor: %f (p-value = %f)\n', rhoSolar, pValueSolar);
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Wind Capacity Factor: %f (p-value = %f)\n', rhoWind, pValueWind);
 
+%% Cost Basis Comparisons?
 
 
-%% Load Data
 Sundata = readtable("SolarData.csv");
 WindData = readtable('WindData.csv');
 
@@ -300,8 +294,8 @@ NewWindData = WindData(:, WindColumnsToInclude);
 NewWindData.Properties.VariableNames = {'Capacity_Factor', 'Longitude', 'Latitude'};
 
 % LCOE Constants ($/MWh)
-LCOE_Solar = 25.21;
-LCOE_Wind = 40.25;
+LCOE_Solar = 1;
+LCOE_Wind = 1;
 
 % Calculate Cost Effectiveness
 % Cost per unit of capacity factor (cost-effectiveness)

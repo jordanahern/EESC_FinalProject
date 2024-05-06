@@ -136,39 +136,57 @@ grid on;  % Turn on the grid for better orientation
 
 
 %% Map for Plant Emissions
-
 % Replace any zero emissions to avoid errors in size scaling
 NewPlantData.CO2_Emissions(NewPlantData.CO2_Emissions == 0) = min(NewPlantData.CO2_Emissions(NewPlantData.CO2_Emissions > 0));
-
 % Prepare size data: Scale CO2 Emissions for visibility
 % You can adjust the scaling factor as needed
 sizeData = 100 * (NewPlantData.CO2_Emissions / max(NewPlantData.CO2_Emissions));
-
 % Prepare color data: Use CO2 Rates
 colorData = NewPlantData.CO2_Rate;
-
 % Create a figure to hold the map
 figure;
-
 % Plot each power plant on the map using geoscatter
 h = geoscatter(NewPlantData.Latitude, NewPlantData.Longitude, sizeData, colorData, 'filled');
-
 % Enhance the colormap to represent emissions rate intensity
 colormap(parula);  % 'parula' uses a spectrum from blue to yellow
 colorbar;  % Adds a color bar to indicate the scale of CO2 Rates
-
 % Set color limits starting at 100
 caxis([100 max(colorData)]);
-
 % Set map limits to focus on the United States
 geolimits([24 50],[-125 -66]);  % These limits roughly frame the continental US
-
 % Add a title
 title('Map of US Power Plants: Size by CO2 Emissions, Color by CO2 Rate');
-
 % Improve the map appearance
 geobasemap grayland; %
 grid on;  % Turn on the grid to help orient the map
+hold off
+
+%% Map for Plant Emissions
+
+% Replace any zero emissions to avoid errors in size scaling
+NewPlantData.SO2_Emissions(NewPlantData.SO2_Emissions == 0) = min(NewPlantData.SO2_Emissions(NewPlantData.SO2_Emissions > 0));
+% Prepare size data: Scale CO2 Emissions for visibility
+% You can adjust the scaling factor as needed
+sizeData_SO2 = 300 * (NewPlantData.SO2_Emissions / max(NewPlantData.SO2_Emissions));
+% Prepare color data: Use CO2 Rates
+colorData_SO2 = NewPlantData.SO2_Rate;
+% Create a figure to hold the map
+figure;
+% Plot each power plant on the map using geoscatter
+t = geoscatter(NewPlantData.Latitude, NewPlantData.Longitude, sizeData_SO2, colorData_SO2, 'filled');
+% Enhance the colormap to represent emissions rate intensity
+colormap(parula);  % 'parula' uses a spectrum from blue to yellow
+colorbar;  % Adds a color bar to indicate the scale of CO2 Rates
+% Set color limits starting at 100
+%caxis([100 max(colorData)]);
+% Set map limits to focus on the United States
+geolimits([24 50],[-125 -66]);  % These limits roughly frame the continental US
+% Add a title
+title('Map of US Power Plants: Size by SO2 Emissions, Color by SO2 Rate');
+% Improve the map appearance
+geobasemap grayland; %
+grid on;  % Turn on the grid to help orient the map
+hold off
 
 %% Test of an interpolated heatmap of emissions rates
 
@@ -257,9 +275,8 @@ end
 
 % Display the correlation results
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Solar Capacity Factor: %f (p-value = %f)\n', rhoSolar, pValueSolar);
+
 fprintf('Spearman correlation coefficient between CO2 Emissions and Weighted Wind Capacity Factor: %f (p-value = %f)\n', rhoWind, pValueWind);
-
-
 
 %% Cost Basis Comparisons?
 
